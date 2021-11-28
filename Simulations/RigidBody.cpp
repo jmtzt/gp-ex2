@@ -1,90 +1,65 @@
 #include "RigidBody.h"
 
-vector<vector<float>> convertTo3D(Mat4 m) {
-	vector<vector<float>> res = vector<vector<float>>();
-
-	for (int i = 0; i < 3; i++) {
-		vector<float> curRow = vector<float>();
-		for (int j = 0; j < 3; j++) {
-			curRow.push_back(m.value[i][j]);
-		}
-		res.push_back(curRow);
-	}
-
-	return res;
-}
-
-RigidBody::RigidBody(Vec3 position, Vec3 size, float mass)
+RigidBody::RigidBody(Vec3 position, Vec3 size,
+	int mass, bool fixed, bool userInteraction)
+	: BaseObject(position, fixed, userInteraction),
+	_size(size),
+	_mass(mass),
+	_orientation(0, 0, 0, 1)
 {
-	// TODO
-	// constructor for rigidbody
-	this->position = position;
-	this->size = size;
-	this->mass = mass;
-	// TODO - rotate 90 around z-axis
-	this->orientation = Quat();
-	this->angularVel = Vec3();
-	this->linearVel = Vec3();
-	this->torque = Vec3();
-
-	// initialize inertia tensor
-	calculateInertia();
+	initInertiaInv();
 }
 
-matrix4x4<double> RigidBody::getObjectWorldPosition()
+void RigidBody::initInertiaInv()
 {
-	// TODO
-	// convert object position to world position
-	// using rotation matrices
-	
-	return matrix4x4<double>();
+	float xx = (1.0 / 12) * _mass * (_size.y * _size.y + _size.z * _size.z);
+	float yy = (1.0 / 12) * _mass * (_size.x * _size.x + _size.z * _size.z);
+	float zz = (1.0 / 12) * _mass * (_size.x * _size.x + _size.y * _size.y);
+	_inertiaTensorInv = Mat4(xx,  0,  0, 0,
+							  0, yy,  0, 0,
+							  0,  0, zz, 0,
+							  0,  0,  0, 1).inverse();
 }
 
-matrix4x4<double> RigidBody::currentInverseInertia()
+void RigidBody::resetForce()
 {
-	// TODO
-	// get inverse inertia tensor
-	// Rotr * Io-1 * Rotr
-	matrix4x4<double> rotr_t = orientation.getRotMat();
-
-	//vector<vector<float>> rotr3D_t = convertTo3D(rotr);
-	//rotr.transpose();
-	//vector<vector<float>> rotr3D = convertTo3D(rotr);
-
-
-	matrix4x4<double> Io = matrix4x4<double>(inertiaTensor[0][0], inertiaTensor[0][1], inertiaTensor[0][2], inertiaTensor[0][3],
-		inertiaTensor[1][0], inertiaTensor[1][1], inertiaTensor[1][2], inertiaTensor[1][3],
-		inertiaTensor[2][0], inertiaTensor[2][1], inertiaTensor[2][2], inertiaTensor[2][3],
-		inertiaTensor[3][0], inertiaTensor[3][1], inertiaTensor[3][2], inertiaTensor[3][3]);
-
-	matrix4x4<double> Io_inv = Io.inverse();
-
-	matrix4x4<double> tmp = Io_inv * rotr_t;
-	
-	//cout << "rotr_transpose\n" << rotr_t;
-	
-	rotr_t.transpose();
-
-	//cout << "rotr\n" << rotr_t;
-
-	return rotr_t * tmp;
+	BaseObject::resetForce();
+	_torque = Vec3(0, 0, 0);
 }
 
-void RigidBody::calculateInertia()
+void RigidBody::applyForce(Vec3 pos, Vec3 force)
 {
-	
-	for (int i = 0; i < 4; i++) {
-		inertiaTensor.push_back(vector<float>());
-		for (int j = 0; j < 4; j++){
-			inertiaTensor[i].push_back(0);
-		}
-	}
-	// according to the cuboid inertia formula, we have in the main diagonal
-	// the following values
-	inertiaTensor[0][0] = (1 / 12.0) * mass * (pow(size.y, 2) + pow(size.z, 2));
-	inertiaTensor[1][1] = (1 / 12.0) * mass * (pow(size.x, 2) + pow(size.z, 2));
-	inertiaTensor[2][2] = (1 / 12.0) * mass * (pow(size.x, 2) + pow(size.y, 2));
-	inertiaTensor[3][3] = 1;
-
+	BaseObject::addForce(force);
+	_torque += cross(pos - position(), force); // torque is wrt to relative position pos - position()
 }
 
+Mat4 RigidBody::scaleMatrix() const
+{
+	Mat4 scaleMatrix;
+	scaleMatrix.initScaling(_size.x, _size.y, _size.z);
+	return scaleMatrix;
+}
+
+Mat4 RigidBody::rotationMatrix() const
+{
+	return _orientation.getRotMat();
+}
+
+Mat4 RigidBody::translationMatrix() const
+{
+	GamePhysics::Mat4 transMat;
+	transMat.initTranslation(position().x, position().y, position().z);
+	return transMat;
+}
+
+Mat4 RigidBody::obj2World() const
+{
+	return scaleMatrix() * rotationMatrix() * translationMatrix();
+}
+
+Mat4 RigidBody::inertiaTensorInv() const
+{
+	Mat4 rotMatT = rotationMatrix();
+	rotMatT.transpose();
+	return rotationMatrix() * _inertiaTensorInv * rotMatT;
+}

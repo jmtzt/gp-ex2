@@ -2,8 +2,7 @@
 #define RIGIDBODYSYSTEMSIMULATOR_h
 #include "Simulator.h"
 //add your header for your rigid body system, for e.g.,
-#include "rigidBodySystem.h" 
-#include "Demo1.h"
+#include "RigidBody.h"
 
 #define TESTCASEUSEDTORUNTEST 2
 
@@ -33,18 +32,21 @@ public:
 	void setOrientationOf(int i,Quat orientation);
 	void setVelocityOf(int i, Vec3 velocity);
 
+	void checkCollision();
+	void checkFloor();
+
 private:
 	// Attributes
 	// add your RigidBodySystem data members, for e.g.,
-	RigidBodySystem * m_pRigidBodySystem; 
 	Vec3 m_externalForce;
-
+	bool _applyMouseForce;
+	float _collisionBounciness;
+	bool _gravityEnabled;
+	Vec3 _gravity;
+	vector<RigidBody> m_pRigidBodySystem;
 	// UI Attributes
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
-
-	// demos
-	Demo1 demo1_;
 	};
 #endif
