@@ -47,7 +47,7 @@ Mat4 RigidBody::rotationMatrix() const
 
 Mat4 RigidBody::translationMatrix() const
 {
-	GamePhysics::Mat4 transMat;
+	Mat4 transMat;
 	transMat.initTranslation(position().x, position().y, position().z);
 	return transMat;
 }

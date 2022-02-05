@@ -5,7 +5,7 @@ RigidBodySystemSimulator::RigidBodySystemSimulator()
 	: 
 	_gravityEnabled(false),
 	_gravity(Vec3(0, -10, 0)),
-	_collisionBounciness(1)
+	_collisionBounciness(1.0f)
 {}
 
 const char* RigidBodySystemSimulator::getTestCasesStr()
